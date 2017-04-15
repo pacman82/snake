@@ -1,0 +1,77 @@
+extern crate piston_window;
+
+use piston_window::*;
+
+const WIDTH: usize = 64;
+const HEIGHT: usize = 35;
+
+#[derive(Clone, Copy)]
+enum Field {
+    Empty,
+    Border,
+    Head,
+    Tail(usize),
+    Food,
+}
+
+struct World {
+    direction: i32,
+    fields: [Field; WIDTH * HEIGHT],
+}
+
+fn main() {
+    let world = World::new();
+
+    let mut window: PistonWindow = WindowSettings::new("Snake",
+                                                       [WIDTH as u32 * 10, HEIGHT as u32 * 10]).max_fps(60)
+        .exit_on_esc(true)
+        .resizable(false)
+        .build()
+        .expect("Could not open window");
+    while let Some(e) = window.next() {
+        match e {
+            _ => (),
+            Input::Press(button) => (),
+            Input::Render(_) => {
+                window.draw_2d(&e, |c, g| {
+                    for (index, &field) in world.fields.iter().enumerate() {
+                        let color = match field {
+                            Field::Empty => [0.0, 0.0, 0.0, 1.0],
+                            Field::Border => [0.0, 0.0, 1.0, 1.0],
+                            Field::Head => [1.0, 1.0, 1.0, 1.0],
+                            Field::Tail(_) => [1.0, 1.0, 1.0, 1.0],
+                            Field::Food => [0.0, 1.0, 0.0, 1.0],
+                        };
+                        let x = (index % WIDTH) as f64 * 10.0;
+                        let y = (index / WIDTH) as f64 * 10.0;
+                        rectangle(color, [x, y, x + 10.0, y + 10.0], c.transform, g);
+                    }
+                    //clear([0.5; 4], g);
+                });
+            }
+        }
+    }
+}
+
+impl World {
+    /// Setup new Game world. Sets up borders and empty space
+    fn new() -> World {
+        let mut fields = [Field::Empty; (WIDTH * HEIGHT) as usize];
+        for x in 0..WIDTH {
+            fields[x] = Field::Border;
+            fields[(HEIGHT - 1) * WIDTH + x] = Field::Border;
+        }
+        for y in 0..HEIGHT {
+            fields[y * WIDTH] = Field::Border;
+            fields[y * WIDTH + WIDTH - 1] = Field::Border;
+        }
+        let head = (HEIGHT + 2) * WIDTH / 2;
+        fields[head] = Field::Head;
+        fields[head + 1] = Field::Tail(head);
+        fields[WIDTH + WIDTH / 2] = Field::Food;
+        World {
+            fields: fields,
+            direction: -1,
+        }
+    }
+}
