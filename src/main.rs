@@ -17,6 +17,18 @@ enum Field {
     Food,
 }
 
+impl Field {
+    fn to_rgba(&self) -> [f32; 4] {
+        match *self {
+            Field::Empty => [0.0, 0.0, 0.0, 1.0],
+            Field::Border => [0.0, 0.0, 1.0, 1.0],
+            Field::Head => [1.0, 1.0, 1.0, 1.0],
+            Field::Tail(_) => [1.0, 1.0, 1.0, 1.0],
+            Field::Food => [0.0, 1.0, 0.0, 1.0],
+        }
+    }
+}
+
 struct World {
     direction: i32,
     head: usize,
@@ -26,9 +38,8 @@ struct World {
 
 fn main() {
     let mut world = World::new();
-
     let mut window: PistonWindow = WindowSettings::new("Snake",
-                                                       [WIDTH as u32 * 10, HEIGHT as u32 * 10])
+                                                       [WIDTH as u32 * 20, HEIGHT as u32 * 20])
         .exit_on_esc(true)
         .resizable(false)
         .build()
@@ -38,23 +49,20 @@ fn main() {
         match e {
             Input::Update(_) => world.update(),
             Input::Press(Button::Keyboard(key)) => world.change_player_direction(key),
-            Input::Render(_) => {
-                window.draw_2d(&e, |c, g| {
-                    for (index, &field) in world.fields.iter().enumerate() {
-                        let color = match field {
-                            Field::Empty => [0.0, 0.0, 0.0, 1.0],
-                            Field::Border => [0.0, 0.0, 1.0, 1.0],
-                            Field::Head => [1.0, 1.0, 1.0, 1.0],
-                            Field::Tail(_) => [1.0, 1.0, 1.0, 1.0],
-                            Field::Food => [0.0, 1.0, 0.0, 1.0],
-                        };
-                        let x = (index % WIDTH) as f64 * 10.0;
-                        let y = (index / WIDTH) as f64 * 10.0;
-                        rectangle(color, [x, y, x + 10.0, y + 10.0], c.transform, g);
-                    }
+            Input::Render(render_args) => {
+                let w = render_args.draw_width as f64 / WIDTH as f64;
+                let h = render_args.draw_height as f64 / HEIGHT as f64;
+
+                window.draw_2d(&e, |c, g| for (x, y, color) in world.fields
+                    .iter()
+                    .enumerate()
+                    .map(|(index, &field)| (index % WIDTH, index / WIDTH, field.to_rgba())) {
+                    let x = x as f64 * w;
+                    let y = y as f64 * h;
+                    rectangle(color, [x, y, x + w, y + h], c.transform, g);
                 });
             }
-            _ =>(),
+            _ => (),
         }
     }
 }
@@ -77,34 +85,37 @@ impl World {
         let mut ret = World {
             fields: fields,
             direction: -1,
-            head : head,
-            tail : head + 1
+            head: head,
+            tail: head + 1,
         };
         ret.rand_new_food();
         ret
     }
 
-    fn update(&mut self){
+    fn update(&mut self) {
 
-        if let Field::Head = self.fields[self.head]{} else { return; }
+        if let Field::Head = self.fields[self.head] {
+        } else {
+            return;
+        }
 
         // move head
         let mut new_head = (self.head as i32 + self.direction) as usize;
-        if let Field::Tail(next) = self.fields[new_head]{
-            if next == self.head{
+        if let Field::Tail(next) = self.fields[new_head] {
+            if next == self.head {
                 new_head = (self.head as i32 - self.direction) as usize;
             }
         }
         let new_head = new_head;
 
         self.fields[self.head] = Field::Tail(new_head);
-        match self.fields[new_head]{
+        match self.fields[new_head] {
             Field::Empty => {
                 self.fields[new_head] = Field::Head;
                 self.head = new_head;
 
                 // remove tail
-                if let Field::Tail(new_tail) = self.fields[self.tail]{
+                if let Field::Tail(new_tail) = self.fields[self.tail] {
                     self.fields[self.tail] = Field::Empty;
                     self.tail = new_tail;
                 }
@@ -114,30 +125,30 @@ impl World {
                 self.head = new_head;
                 self.rand_new_food();
             }
-            _ => ()
+            _ => (),
         }
     }
 
-    fn change_player_direction(&mut self, key: Key){
-        self.direction = match key{
+    fn change_player_direction(&mut self, key: Key) {
+        self.direction = match key {
             Key::Up => -(WIDTH as i32),
             Key::Down => WIDTH as i32,
-            Key::Left =>  -1,
-            Key::Right =>  1,
+            Key::Left => -1,
+            Key::Right => 1,
             _ => return,
         };
     }
 
-    fn rand_new_food(&mut self){
+    fn rand_new_food(&mut self) {
         let mut rng = rand::thread_rng();
         loop {
-            let index: usize= rng.gen();
-            let index =  index % (WIDTH * HEIGHT);
-            match self.fields[index]{
+            let index: usize = rng.gen();
+            let index = index % (WIDTH * HEIGHT);
+            match self.fields[index] {
                 Field::Empty => {
                     self.fields[index] = Field::Food;
                     break;
-                },
+                }
                 _ => (),
             }
         }
