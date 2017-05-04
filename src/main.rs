@@ -83,12 +83,12 @@ impl World {
         fields[head] = Field::Head;
         fields[head + 1] = Field::Tail(head);
         let mut ret = World {
-            fields: fields,
+            fields,
             direction: -1,
-            head: head,
+            head,
             tail: head + 1,
         };
-        ret.rand_new_food();
+        ret.fields[ret.random_empty()] = Field::Food;
         ret
     }
 
@@ -123,7 +123,7 @@ impl World {
             Field::Food => {
                 self.fields[new_head] = Field::Head;
                 self.head = new_head;
-                self.rand_new_food();
+                self.fields[self.random_empty()] = Field::Food;
             }
             _ => (),
         }
@@ -139,18 +139,17 @@ impl World {
         };
     }
 
-    fn rand_new_food(&mut self) {
+    fn random_empty(&self) -> usize{
         let mut rng = rand::thread_rng();
+        let mut index: usize;
         loop {
-            let index: usize = rng.gen();
-            let index = index % (WIDTH * HEIGHT);
+            index = rng.gen();
+            index = index % (WIDTH * HEIGHT);
             match self.fields[index] {
-                Field::Empty => {
-                    self.fields[index] = Field::Food;
-                    break;
-                }
-                _ => (),
+                Field::Empty => break,
+                _ => continue,
             }
-        }
+        };
+        index
     }
 }
