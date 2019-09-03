@@ -1,8 +1,8 @@
 extern crate piston_window;
 extern crate rand;
 
-use piston_window::*;
 use piston_window::keyboard::Key;
+use piston_window::*;
 use rand::Rng;
 
 const WIDTH: usize = 64;
@@ -38,22 +38,29 @@ struct World {
 
 fn main() {
     let mut world = World::new();
-    let mut window: PistonWindow = WindowSettings::new("Snake",
-                                                       [WIDTH as u32 * 20, HEIGHT as u32 * 20])
-        .exit_on_esc(true)
-        .resizable(false)
-        .build()
-        .expect("Could not open window");
+    let mut window: PistonWindow =
+        WindowSettings::new("Snake", [WIDTH as u32 * 20, HEIGHT as u32 * 20])
+            .exit_on_esc(true)
+            .resizable(false)
+            .build()
+            .expect("Could not open window");
     window.set_ups(8); //Updates Per Second
     while let Some(e) = window.next() {
         match e {
-            Input::Update(_) => world.update(),
-            Input::Press(Button::Keyboard(key)) => world.change_player_direction(key),
-            Input::Render(render_args) => {
-                let w = render_args.draw_width as f64 / WIDTH as f64;
-                let h = render_args.draw_height as f64 / HEIGHT as f64;
+            Event::Input(input, _timestamp) => match input {
+                Input::Button(ButtonArgs {
+                    state: ButtonState::Press,
+                    button: Button::Keyboard(key),
+                    scancode: _,
+                }) => world.change_player_direction(key),
+                _ => (),
+            },
+            Event::Loop(Loop::Update(_)) => world.update(),
+            Event::Loop(Loop::Render(render_args)) => {
+                let w = render_args.draw_size[0] as f64 / WIDTH as f64;
+                let h = render_args.draw_size[1] as f64 / HEIGHT as f64;
 
-                window.draw_2d(&e, |c, g| for (x, y, color) in world.fields
+                window.draw_2d(&e, |c, g, _d| for (x, y, color) in world.fields
                     .iter()
                     .enumerate()
                     .map(|(index, &field)| (index % WIDTH, index / WIDTH, field.to_rgba())) {
@@ -93,7 +100,6 @@ impl World {
     }
 
     fn update(&mut self) {
-
         if let Field::Head = self.fields[self.head] {
         } else {
             return;
@@ -139,7 +145,7 @@ impl World {
         };
     }
 
-    fn random_empty(&self) -> usize{
+    fn random_empty(&self) -> usize {
         let mut rng = rand::thread_rng();
         let mut index: usize;
         loop {
@@ -149,7 +155,7 @@ impl World {
                 Field::Empty => break,
                 _ => continue,
             }
-        };
+        }
         index
     }
 }
